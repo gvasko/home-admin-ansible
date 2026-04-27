@@ -21,5 +21,40 @@
         test_command: whoami
       when: dist_upgrade.changed
 
+  tasks:
+    - name: Ensure /mnt/nvrdisk exists
+      file:
+        path: /mnt/nvrdisk
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Mount NVR disk on /mnt/nvrdisk
+      mount:
+        path: /mnt/nvrdisk
+        src: UUID={{ nvrdisk_uuid }}
+        fstype: ext4
+        opts: defaults,noatime
+        state: mounted
+      when: nvrdisk_uuid is defined
+
+    - name: Ensure /mnt/backup exists
+      file:
+        path: /mnt/backup
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Mount backup disk on /mnt/backup
+      mount:
+        path: /mnt/backup
+        src: UUID={{ backupdisk_uuid }}
+        fstype: ext4
+        opts: defaults,noatime
+        state: mounted
+      when: backupdisk_uuid is defined
+
   roles:
     - common
