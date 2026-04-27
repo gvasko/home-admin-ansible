@@ -1,0 +1,62 @@
+services:
+  mqtt:
+    image: eclipse-mosquitto:${MQTT_VERSION}
+    container_name: mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ${MQTT_BASEDIR}/config:/mosquitto/config
+      - ${MQTT_BASEDIR}/data:/mosquitto/data
+      - ${MQTT_BASEDIR}/log:/mosquitto/log
+
+  frigate:
+    depends_on:
+      - mqtt
+    image: ghcr.io/blakeblackshear/frigate:${FRIGATE_VERSION}
+    container_name: frigate
+    privileged: true
+    cap_add:
+      - CAP_PERFMON
+    restart: unless-stopped
+    stop_grace_period: 30s
+    shm_size: "2048m"
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+      - /dev/dri/card1:/dev/dri/card1
+      - /dev/dri/renderD128:/dev/dri/renderD128
+    group_add:
+      - video
+    volumes:
+      - ${CAM_STORAGE_MNT}/cam-storage:/media/frigate
+      - ${CAM_STORAGE_MNT}/cam-config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - type: tmpfs
+        target: /tmp/cache
+        tmpfs:
+          size: 1073741824
+    environment:
+      FRIGATE_RTSP_PASSWORD: ${FRIGATE_RTSP_PASSWORD}
+      LIBVA_DRIVER_NAME: "i965"
+    ports:
+      - "8971:8971"
+      - "8554:8554"
+      - "8555:8555/tcp"
+      - "8555:8555/udp"
+
+  downloader:
+    depends_on:
+      - mqtt
+      - frigate
+    image: alpine:latest
+    container_name: frigate_downloader
+    restart: unless-stopped
+    volumes:
+      - ./event-clip-downloader.sh:/event-clip-downloader.sh:ro
+      - ${LOCAL_CAM_DETECTOR_DIR}:/clips
+    environment:
+      PUSHOVER_TOKEN: ${PUSHOVER_HOMESEC_TOKEN}
+      PUSHOVER_USERKEY: ${PUSHOVER_USERKEY}
+      NOTIFICATION_ENABLED: ${PUSHOVER_ENABLED}
+    entrypoint: /bin/sh -c "apk add --no-cache mosquitto-clients jq curl bash && /event-clip-downloader.sh"    
+

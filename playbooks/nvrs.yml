@@ -56,6 +56,147 @@
         state: mounted
       when: backupdisk_uuid is defined
 
+    - name: Ensure NVR home automation directory exists
+      file:
+        path: /home/nvr/home-admin
+        state: directory
+        owner: nvr
+        group: nvr
+        mode: '0755'
+
+    - name: Copy host scripts to NVR home admin directory
+      synchronize:
+        src: "{{ playbook_dir }}/../scripts/"
+        dest: /home/nvr/home-admin/
+        recursive: yes
+        delete: no
+      become: false
+
+    - name: Ensure NVR home automation scripts are owned by nvr
+      file:
+        path: /home/nvr/home-admin
+        state: directory
+        recurse: yes
+        owner: nvr
+        group: nvr
+        mode: '0755'
+
+    - name: Install NUT for Eaton UPS monitoring
+      apt:
+        name:
+          - nut
+          - nut-server
+          - nut-client
+        state: latest
+        update_cache: yes
+      apt:
+        name:
+          - nut
+          - nut-server
+          - nut-client
+        state: latest
+        update_cache: yes
+
+    - name: Configure NUT standalone mode
+      copy:
+        dest: /etc/nut/nut.conf
+        content: |
+          MODE=standalone
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Configure NUT UPS definition
+      copy:
+        dest: /etc/nut/ups.conf
+        content: |
+          [eaton]
+              driver = usbhid-ups
+              port = auto
+              desc = "EATON UPS 5E 900 USB DIN Gen2"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Configure NUT server listeners
+      copy:
+        dest: /etc/nut/upsd.conf
+        content: |
+          LISTEN 127.0.0.1 3493
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Configure NUT users
+      copy:
+        dest: /etc/nut/upsd.users
+        content: |
+          [monuser]
+              password = monitor
+              upsmon master
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Configure NUT monitor
+      copy:
+        dest: /etc/nut/upsmon.conf
+        content: |
+          MONITOR eaton@localhost 1 monuser monitor master
+          MINSUPPLIES 1
+          SHUTDOWNCMD "/sbin/shutdown -h +0"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Ensure NUT driver is started and enabled
+      service:
+        name: nut-driver
+        state: started
+        enabled: yes
+
+    - name: Ensure NUT server is started and enabled
+      service:
+        name: nut-server
+        state: started
+        enabled: yes
+
+    - name: Ensure NUT monitor is started and enabled
+      service:
+        name: nut-monitor
+        state: started
+        enabled: yes
+
+    - name: Add Coral Edge TPU APT repository key
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present
+
+    - name: Add Coral Edge TPU APT repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://packages.cloud.google.com/apt coral-edgetpu-stable main"
+        state: present
+        filename: coral-edgetpu
+
+    - name: Update apt cache after adding Coral repo
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install Coral USB Edge TPU runtime
+      apt:
+        name:
+          - libedgetpu1-std
+        state: latest
+
+    - name: Create NVR home automation secrets file
+      template:
+        src: "{{ playbook_dir }}/../templates/home-automation.secrets.j2"
+        dest: /home/nvr/.home-automation.secrets
+        owner: nvr
+        group: nvr
+        mode: '0600'
+
     - name: Install prerequisites for Docker
       apt:
         name:

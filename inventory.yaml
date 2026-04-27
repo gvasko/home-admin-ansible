@@ -15,4 +15,3 @@ home_hosts:
   children:
     - nvrs
     - raspis
-
