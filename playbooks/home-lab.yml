@@ -1,0 +1,25 @@
+- name: Apply NVR configuration
+  hosts: nvrs
+  gather_facts: yes
+  become: yes
+  pre_tasks:
+    - name: Ensure apt cache is updated
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Perform full dist-upgrade
+      apt:
+        upgrade: dist
+        autoremove: yes
+        autoclean: yes
+      register: dist_upgrade
+
+    - name: Reboot if required after dist-upgrade
+      reboot:
+        reboot_timeout: 600
+        test_command: whoami
+      when: dist_upgrade.changed
+
+  roles:
+    - common

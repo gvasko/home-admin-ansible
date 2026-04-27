@@ -1,0 +1,18 @@
+nvrs:
+  hosts:
+    homenvr:
+      ansible_host: homenvr
+      ansible_user: nvr
+      ansible_port: 22
+
+raspis:
+  hosts:
+    raspi:
+      ansible_host: raspi.local
+      ansible_user: pi
+
+home_hosts:
+  children:
+    - nvrs
+    - raspis
+

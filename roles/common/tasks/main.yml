@@ -1,0 +1,15 @@
+- name: Ensure common packages are installed
+  package:
+    name:
+      - vim
+      - git
+      - curl
+    state: present
+
+- name: Ensure /etc/motd exists
+  copy:
+    dest: /etc/motd
+    content: "Managed by Ansible\n"
+    owner: root
+    group: root
+    mode: '0644'
