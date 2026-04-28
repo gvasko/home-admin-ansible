@@ -183,23 +183,26 @@
         group: root
         mode: '0644'
 
-    - name: Ensure NUT driver is started and enabled
-      service:
-        name: nut-driver.service
+    - name: Ensure Eaton NUT driver is started and enabled
+      ansible.builtin.systemd_service:
+        name: nut-driver@eaton.service
         state: started
         enabled: yes
+        daemon_reload: yes
 
     - name: Ensure NUT server is started and enabled
-      service:
+      ansible.builtin.systemd_service:
         name: nut-server.service
         state: started
         enabled: yes
+        daemon_reload: yes
 
     - name: Ensure NUT monitor is started and enabled
-      service:
+      ansible.builtin.systemd_service:
         name: nut-monitor.service
         state: started
         enabled: yes
+        daemon_reload: yes
 
     - name: Add Coral Edge TPU APT repository key
       apt_key:
@@ -282,7 +285,7 @@
         state: latest
 
     - name: Ensure Docker service is started and enabled
-      service:
+      ansible.builtin.systemd_service:
         name: docker
         state: started
         enabled: yes
