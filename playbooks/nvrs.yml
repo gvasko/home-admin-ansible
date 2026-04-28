@@ -89,13 +89,6 @@
           - nut-client
         state: latest
         update_cache: yes
-      apt:
-        name:
-          - nut
-          - nut-server
-          - nut-client
-        state: latest
-        update_cache: yes
 
     - name: Configure NUT standalone mode
       copy:
@@ -114,6 +107,10 @@
               driver = usbhid-ups
               port = auto
               desc = "EATON UPS 5E 900 USB DIN Gen2"
+              vendorid = 0463
+              productid = ffff
+              ignorelb
+              override.battery.charge.low = 60
         owner: root
         group: root
         mode: '0644'
@@ -133,37 +130,74 @@
         content: |
           [monuser]
               password = monitor
-              upsmon master
+              upsmon primary
         owner: root
         group: root
         mode: '0600'
+
+    - name: Configure NUT logs
+      copy:
+        dest: /etc/nut/upslog.conf
+        content: |
+          MONITOR eaton@localhost "/var/log/ups/upslog.log" "[%TIME @Y-@m-@d @H:@M:@S%] Battery: %VAR battery.charge %%%
+          Input voltage: %VAR input.voltage% UPS load: %VAR ups.load% STATUS: [%VAR ups.status%] Temperature: %VAR ups.temperature% Frequency: %VAR input.frequency%"
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Add UPS notify script
+      copy:
+        dest: /etc/nut/ups-notify.sh
+        content: |
+          #!/bin/bash
+          source "/home/nvr/.home-automation.secrets"
+          curl -s --form-string "token=$PUSHOVER_UPS_TOKEN" --form-string "user=$PUSHOVER_USERKEY" --form-string "message=$1" https://api.pushover.net/1/messages.json
+        owner: root
+        group: root
+        mode: '0755'
 
     - name: Configure NUT monitor
       copy:
         dest: /etc/nut/upsmon.conf
         content: |
-          MONITOR eaton@localhost 1 monuser monitor master
+          MONITOR eaton@localhost 1 monuser monitor primary
           MINSUPPLIES 1
           SHUTDOWNCMD "/sbin/shutdown -h +0"
+          NOTIFYCMD /etc/nut/ups-notify.sh
+          NOTIFYMSG ONLINE      "UPS-OK %s on line power"
+          NOTIFYMSG ONBATT      "UPS-ALERT %s on battery"
+          NOTIFYMSG LOWBATT     "UPS-ALERT %s battery is low"
+          NOTIFYMSG FSD         "UPS-ALERT %s: forced shutdown in progress"
+          NOTIFYMSG COMMOK      "UPS-OK Communications with UPS %s established"
+          NOTIFYMSG COMMBAD     "UPS-ERR Communications with UPS %s lost"
+          NOTIFYMSG SHUTDOWN    "UPS-ALERT Auto logout and shutdown proceeding"
+          NOTIFYMSG REPLBATT    "UPS-WARN %s battery needs to be replaced"
+          NOTIFYMSG NOCOMM      "UPS-ERR %s is unavailable"
+          NOTIFYMSG NOPARENT    "UPS-ERR upsmon parent process died - shutdown impossible"
+          NOTIFYMSG CAL         "UPS-INFO %s: calibration in progress"
+          NOTIFYMSG OFF         "UPS-ALERT %s: administratively OFF or asleep"
+          NOTIFYMSG NOTOFF      "UPS-OK %s: no longer administratively OFF or asleep"
+          NOTIFYMSG BYPASS      "UPS-WARN %s: on bypass (powered, not protecting)"
+          NOTIFYMSG NOTBYPASS   "UPS-OK %s: no longer on bypass"
         owner: root
         group: root
         mode: '0644'
 
     - name: Ensure NUT driver is started and enabled
       service:
-        name: nut-driver
+        name: nut-driver.service
         state: started
         enabled: yes
 
     - name: Ensure NUT server is started and enabled
       service:
-        name: nut-server
+        name: nut-server.service
         state: started
         enabled: yes
 
     - name: Ensure NUT monitor is started and enabled
       service:
-        name: nut-monitor
+        name: nut-monitor.service
         state: started
         enabled: yes
 
@@ -188,6 +222,20 @@
         name:
           - libedgetpu1-std
         state: latest
+
+    - name: Configure Coral USB access rules
+      copy:
+        dest: /etc/udev/rules.d/99-coral.rules
+        content: |
+          SUBSYSTEM=="usb", ATTR{idVendor}=="1a6e", GROUP="plugdev", MODE="0660"
+          SUBSYSTEM=="usb", ATTR{idVendor}=="18d1", GROUP="plugdev", MODE="0660"
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Reload udev rules and trigger
+      command: udevadm control --reload-rules && udevadm trigger
+      become: true
 
     - name: Create NVR home automation secrets file
       template:
@@ -246,6 +294,12 @@
         append: yes
       loop: "{{ docker_users | default([]) }}"
       when: docker_users is defined
+
+    - name: Install Tailscale using official script
+      shell: curl -fsSL https://tailscale.com/install.sh | sh
+      become: true
+      args:
+        creates: /usr/bin/tailscale
 
   roles:
     - common
