@@ -315,7 +315,7 @@
 
     - name: Copy Nginx configuration file
       ansible.builtin.copy:
-        src: ./templates/nginx/frigate
+        src: ../templates/nginx/frigate
         dest: /etc/nginx/sites-available/frigate
         mode: '0644'
       notify: Reload Nginx
