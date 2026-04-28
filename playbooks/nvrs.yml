@@ -237,7 +237,7 @@
         mode: '0600'
 
     - name: Reload udev rules and trigger
-      command: udevadm control --reload-rules && udevadm trigger
+      ansible.builtin.shell: udevadm control --reload-rules && udevadm trigger
       become: true
 
     - name: Create NVR home automation secrets file
