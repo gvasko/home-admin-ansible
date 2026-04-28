@@ -320,6 +320,13 @@
         mode: '0644'
       notify: Reload Nginx
 
+    - name: Enable the Nginx site by creating a symlink
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/frigate
+        dest: /etc/nginx/sites-enabled/frigate
+        state: link
+      notify: Reload Nginx
+
     - name: Ensure Nginx is started and enabled
       ansible.builtin.service:
         name: nginx
