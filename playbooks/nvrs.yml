@@ -308,5 +308,65 @@
       args:
         creates: /usr/bin/tailscale
 
+    - name: Install Nginx
+      ansible.builtin.package:
+        name: nginx
+        state: present
+
+    - name: Copy Nginx configuration file
+      ansible.builtin.copy:
+        src: ./templates/nginx/frigate
+        dest: /etc/nginx/sites-available/frigate
+        mode: '0644'
+      notify: Reload Nginx
+
+    - name: Ensure Nginx is started and enabled
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Install Azure CLI
+      become: yes
+      apt:
+        name: apt-transport-https
+        state: present
+
+    - name: Add Microsoft GPG key
+      become: yes
+      apt_key:
+        url: https://packages.microsoft.com/keys/microsoft.asc
+        state: present
+
+    - name: Determine distribution release
+      command: lsb_release -cs
+      register: distribution_release
+      changed_when: false
+      check_mode: no
+
+    - name: Add Azure CLI Repository
+      become: yes
+      apt_repository:
+        repo: "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ {{ distribution_release.stdout }} main"
+        state: present
+        filename: azure-cli
+
+    - name: Update apt cache
+      become: yes
+      apt:
+        update_cache: yes
+
+    - name: Install Azure CLI
+      become: yes
+      apt:
+        name: azure-cli
+        state: latest
+
+  handlers:
+    - name: Reload Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
+
   roles:
     - common
