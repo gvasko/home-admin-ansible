@@ -36,8 +36,16 @@ ionice -c 3 rsync --inplace --size-only -avh --delete --bwlimit=$RATE_LIMIT_KBPS
 rsyncStatus=$?
 
 if [ $rsyncStatus -ne 0 ]; then
-    echo "RSync error: $rsyncStatus" >> "$LOGFILE"
-    $BASEDIR/tools/admin-notify.sh "ERROR! Local backup rsync error: $rsyncStatus"
+    echo "RSync error during CAM backup: $rsyncStatus" >> "$LOGFILE"
+    $BASEDIR/tools/admin-notify.sh "ERROR! Local backup rsync error CAM: $rsyncStatus"
+fi
+
+ionice -c 3 rsync --inplace --size-only -avh --bwlimit=$RATE_LIMIT_KBPS "$RSYNC_CONFIG_SOURCE" "$RSYNC_CONFIG_DEST" >> "$LOGFILE" 2>&1
+rsyncStatus=$?
+
+if [ $rsyncStatus -ne 0 ]; then
+    echo "RSync error during CONFIG backup: $rsyncStatus" >> "$LOGFILE"
+    $BASEDIR/tools/admin-notify.sh "ERROR! Local backup rsync error CONFIG: $rsyncStatus"
 fi
 
 date >> "$LOGFILE"
