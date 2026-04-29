@@ -1,4 +1,5 @@
 #!/bin/bash
+{
 source "$HOME/.home-automation.secrets"
 
 if [ -z $BASEDIR ]; then
@@ -41,3 +42,4 @@ fi
 date >> "$LOGFILE"
 echo "Cam storage sync finished." >> "$LOGFILE"
 
+}

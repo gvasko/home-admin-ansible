@@ -1,4 +1,5 @@
 #!/bin/bash
+{
 source "$HOME/.home-automation.secrets"
 
 if [ -z $BASEDIR ]; then
@@ -8,3 +9,4 @@ fi
 
 $BASEDIR/tools/admin-notify.sh "INFO NVR started"
 
+}

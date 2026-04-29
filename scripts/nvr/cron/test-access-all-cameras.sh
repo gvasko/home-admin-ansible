@@ -1,4 +1,5 @@
 #!/bin/bash
+{
 source "$HOME/.home-automation.secrets"
 
 if [ -z $BASEDIR ]; then
@@ -13,3 +14,4 @@ $BASEDIR/tools/test-access.sh cam-yard $CAM_YARD_IP
 $BASEDIR/tools/test-access.sh cam-garden $CAM_GARDEN_IP
 
 
+}

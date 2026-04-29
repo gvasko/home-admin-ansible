@@ -1,5 +1,5 @@
 #!/bin/bash
-
+{
 source "$HOME/.home-automation.secrets"
 
 if [ -z $BASEDIR ]; then
@@ -23,5 +23,4 @@ else
 	fi
 fi
 
-
-
+}

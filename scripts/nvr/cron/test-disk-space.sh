@@ -1,4 +1,5 @@
 #!/bin/bash
+{
 source "$HOME/.home-automation.secrets"
 
 if [ -z $BASEDIR ]; then
@@ -22,3 +23,4 @@ fi
 #        $BASEDIR/tools/admin-notify.sh "WARNING! NVR disk below 1000GB"
 #fi
 
+}

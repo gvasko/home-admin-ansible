@@ -3,6 +3,11 @@
   gather_facts: yes
   become: yes
   pre_tasks:
+    - name: Set system timezone to Europe/Budapest
+      community.general.timezone:
+        name: Europe/Budapest
+      become: true
+
     - name: Ensure apt cache is updated
       apt:
         update_cache: yes
@@ -20,6 +25,14 @@
         reboot_timeout: 600
         test_command: whoami
       when: dist_upgrade.changed
+
+    - name: Install tools
+      apt:
+        name:
+          - ifstat
+          - intel-gpu-tools
+        state: present
+        update_cache: yes
 
   tasks:
     - name: Ensure /mnt/nvrdisk exists
@@ -60,6 +73,13 @@
         state: mounted
       when: backupdisk_uuid is defined
 
+    - name: Add nvr user to adm group
+      ansible.builtin.user:
+        name: nvr
+        groups: adm
+        append: yes
+      become: true
+
     - name: Ensure NVR home automation directory exists
       file:
         path: /home/nvr/home-admin
@@ -67,6 +87,60 @@
         owner: nvr
         group: nvr
         mode: '0755'
+
+    - name: Ensure cam-backup log file exists
+      ansible.builtin.file:
+        path: /var/log/cam-backup.log
+        state: touch
+        owner: root
+        group: adm
+        mode: '0664'
+        modification_time: preserve
+        access_time: preserve
+      become: true
+
+    - name: Create logrotate configuration for cam-backup
+      ansible.builtin.copy:
+        dest: /etc/logrotate.d/cam-backup
+        owner: root
+        group: adm
+        mode: '0664'
+        content: |
+          /var/log/cam-backup.log {
+              daily
+              rotate 3
+              missingok
+              notifempty
+              create 0664 root adm
+          }
+      become: true
+
+    - name: Ensure cam-upload log file exists
+      ansible.builtin.file:
+        path: /var/log/cam-upload.log
+        state: touch
+        owner: root
+        group: adm
+        mode: '0664'
+        modification_time: preserve
+        access_time: preserve
+      become: true 
+
+    - name: Create logrotate configuration for cam-upload
+      ansible.builtin.copy:
+        dest: /etc/logrotate.d/cam-upload
+        owner: root
+        group: adm
+        mode: '0664'
+        content: |
+          /var/log/cam-upload.log {
+              daily
+              rotate 3
+              missingok
+              notifempty
+              create 0664 root adm
+          }
+      become: true
 
     - name: Copy host scripts to NVR home admin directory
       synchronize:
@@ -85,6 +159,13 @@
         group: nvr
         mode: '0755'
 
+    - name: Link secret file to project .env
+      ansible.builtin.file:
+        src: /home/nvr/.home-automation.secrets
+        dest: /home/nvr/home-admin/nvr/.env
+        state: link
+        force: yes
+
     - name: Install NUT for Eaton UPS monitoring
       apt:
         name:
@@ -100,8 +181,8 @@
         content: |
           MODE=standalone
         owner: root
-        group: root
-        mode: '0644'
+        group: nut
+        mode: '0640'
 
     - name: Configure NUT UPS definition
       copy:
@@ -116,8 +197,8 @@
               ignorelb
               override.battery.charge.low = 60
         owner: root
-        group: root
-        mode: '0644'
+        group: nut
+        mode: '0640'
 
     - name: Configure NUT server listeners
       copy:
@@ -125,8 +206,8 @@
         content: |
           LISTEN 127.0.0.1 3493
         owner: root
-        group: root
-        mode: '0644'
+        group: nut
+        mode: '0640'
 
     - name: Configure NUT users
       copy:
@@ -136,8 +217,8 @@
               password = monitor
               upsmon primary
         owner: root
-        group: root
-        mode: '0600'
+        group: nut
+        mode: '0640'
 
     - name: Configure NUT logs
       copy:
@@ -146,19 +227,22 @@
           MONITOR eaton@localhost "/var/log/ups/upslog.log" "[%TIME @Y-@m-@d @H:@M:@S%] Battery: %VAR battery.charge %%%
           Input voltage: %VAR input.voltage% UPS load: %VAR ups.load% STATUS: [%VAR ups.status%] Temperature: %VAR ups.temperature% Frequency: %VAR input.frequency%"
         owner: root
-        group: root
-        mode: '0600'
+        group: nut
+        mode: '0640'
 
     - name: Add UPS notify script
       copy:
         dest: /etc/nut/ups-notify.sh
         content: |
           #!/bin/bash
-          source "/home/nvr/.home-automation.secrets"
-          curl -s --form-string "token=$PUSHOVER_UPS_TOKEN" --form-string "user=$PUSHOVER_USERKEY" --form-string "message=$1" https://api.pushover.net/1/messages.json
+          curl -s \
+          --form-string "token={{ lookup('env', 'CTRLNODE_PUSHOVER_UPS_TOKEN') }}" \
+          --form-string "user={{ lookup('env', 'CTRLNODE_PUSHOVER_USERKEY') }}" \
+          --form-string "message=$1" \
+          https://api.pushover.net/1/messages.json
         owner: root
-        group: root
-        mode: '0755'
+        group: nut
+        mode: '0755'  
 
     - name: Configure NUT monitor
       copy:
@@ -183,9 +267,19 @@
           NOTIFYMSG NOTOFF      "UPS-OK %s: no longer administratively OFF or asleep"
           NOTIFYMSG BYPASS      "UPS-WARN %s: on bypass (powered, not protecting)"
           NOTIFYMSG NOTBYPASS   "UPS-OK %s: no longer on bypass"
+          NOTIFYFLAG ONLINE	SYSLOG+EXEC
+          NOTIFYFLAG ONBATT	SYSLOG+EXEC
+          NOTIFYFLAG LOWBATT	SYSLOG+EXEC
+          NOTIFYFLAG FSD		SYSLOG+EXEC
+          NOTIFYFLAG COMMOK	SYSLOG+EXEC
+          NOTIFYFLAG COMMBAD	SYSLOG+EXEC
+          NOTIFYFLAG SHUTDOWN	SYSLOG+EXEC
+          NOTIFYFLAG REPLBATT	SYSLOG+EXEC
+          NOTIFYFLAG NOCOMM	SYSLOG+EXEC
+          NOTIFYFLAG NOPARENT	SYSLOG+EXEC
         owner: root
-        group: root
-        mode: '0644'
+        group: nut
+        mode: '0640'
 
     - name: Ensure Eaton NUT driver is started and enabled
       ansible.builtin.systemd_service:
@@ -294,13 +388,12 @@
         state: started
         enabled: yes
 
-    - name: Add Docker users to docker group
-      user:
-        name: "{{ item }}"
+    - name: Add nvr user to docker group
+      ansible.builtin.user:
+        name: nvr
         groups: docker
         append: yes
-      loop: "{{ docker_users | default([]) }}"
-      when: docker_users is defined
+      become: true
 
     - name: Install Tailscale using official script
       shell: curl -fsSL https://tailscale.com/install.sh | sh
@@ -333,41 +426,69 @@
         state: started
         enabled: yes
 
-    - name: Install Azure CLI
-      become: yes
-      apt:
-        name: apt-transport-https
-        state: present
+    - name: Remove the default Nginx site symlink
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: Reload Nginx
 
-    - name: Add Microsoft GPG key
-      become: yes
-      apt_key:
-        url: https://packages.microsoft.com/keys/microsoft.asc
-        state: present
+    - name: Download Microsoft repository configuration
+      ansible.builtin.get_url:
+        url: "https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb"
+        dest: /tmp/packages-microsoft-prod.deb
 
-    - name: Determine distribution release
-      command: lsb_release -cs
-      register: distribution_release
-      changed_when: false
-      check_mode: no
+    - name: Install Microsoft repository package
+      ansible.builtin.apt:
+        deb: /tmp/packages-microsoft-prod.deb
 
-    - name: Add Azure CLI Repository
-      become: yes
-      apt_repository:
-        repo: "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ {{ distribution_release.stdout }} main"
-        state: present
-        filename: azure-cli
-
-    - name: Update apt cache
-      become: yes
-      apt:
+    - name: Update apt cache and install azcopy
+      ansible.builtin.apt:
+        name: azcopy
         update_cache: yes
+        state: present
 
-    - name: Install Azure CLI
-      become: yes
-      apt:
-        name: azure-cli
-        state: latest
+    - name: Clean up the .deb installer
+      ansible.builtin.file:
+        path: /tmp/packages-microsoft-prod.deb
+        state: absent
+
+    - name: Schedule all background tasks
+      ansible.builtin.cron:
+        name: "{{ item.name }}"
+        minute: "{{ item.minute | default('*') }}"
+        hour: "{{ item.hour | default('*') }}"
+        job: "{{ item.job }}"
+        state: present
+        user: nvr
+      loop:
+        - name: "cam-backup local copy"
+          job: "/home/nvr/home-admin/nvr/cron/cam-backup.sh"
+        - name: "cam-upload"
+          minute: "*/2"
+          job: "/home/nvr/home-admin/nvr/cron/cam-upload.sh"
+        - name: "event-video cleanup"
+          minute: "5"
+          hour: "21"
+          job: "/home/nvr/home-admin/nvr/cron/detector-cleanup.sh"
+        - name: "backup test"
+          minute: "5"
+          hour: "5"
+          job: "/home/nvr/home-admin/nvr/cron/backup-test.sh"
+        - name: "disk space test"
+          minute: "5"
+          hour: "6"
+          job: "/home/nvr/home-admin/nvr/cron/test-disk-space.sh"
+        - name: "docker logs test"
+          minute: "2"
+          job: "/home/nvr/home-admin/nvr/cron/test-docker-logs.sh"
+
+    - name: Send message after boot
+      ansible.builtin.cron:
+        name: "message at boot"
+        special_time: reboot
+        job: "sleep 10 && /home/nvr/home-admin/nvr/cron/test-docker-logs.sh"
+        user: nvr
+
 
   handlers:
     - name: Reload Nginx
