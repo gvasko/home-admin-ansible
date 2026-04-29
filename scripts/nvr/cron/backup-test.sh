@@ -1,4 +1,6 @@
 #!/bin/bash
+# MANAGED BY ANSIBLE
+{
 source "$HOME/.home-automation.secrets"
 
 if [ -z $BASEDIR ]; then
@@ -30,3 +32,4 @@ MESSAGE=${NUMBER_OF_CHANGES/Number of regular files transferred/Backup differenc
 
 $BASEDIR/tools/silent-notify.sh "INFO: $MESSAGE"
 
+}

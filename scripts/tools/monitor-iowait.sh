@@ -1,4 +1,5 @@
 #!/bin/bash
+# MANAGED BY ANSIBLE
 
 
 while true; do

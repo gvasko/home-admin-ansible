@@ -1,4 +1,5 @@
 #!/bin/bash
+# MANAGED BY ANSIBLE
 
 # Use "mqtt" as host because they are in the same docker network
 MQTT_HOST="mqtt"

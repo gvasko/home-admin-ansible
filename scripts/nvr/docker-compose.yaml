@@ -1,3 +1,5 @@
+# MANAGED BY ANSIBLE
+
 services:
   mqtt:
     image: eclipse-mosquitto:${MQTT_VERSION}

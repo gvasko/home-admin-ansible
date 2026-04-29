@@ -1,5 +1,6 @@
 #!/bin/bash
-#
+# MANAGED BY ANSIBLE
+
 {
 source "$HOME/.home-automation.secrets"
 
