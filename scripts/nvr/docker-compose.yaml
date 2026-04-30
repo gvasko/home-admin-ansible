@@ -60,5 +60,7 @@ services:
       PUSHOVER_TOKEN: ${PUSHOVER_HOMESEC_TOKEN}
       PUSHOVER_USERKEY: ${PUSHOVER_USERKEY}
       NOTIFICATION_ENABLED: ${PUSHOVER_ENABLED}
+      METADATA_FUNC: ${AZFUNC_ENDPOINT_CREATE_OBJECT_DETECTION_METADATA}
+      METADATA_KEY: ${AZFUNC_KEY_CREATE_OBJECT_DETECTION_METADATA}
     entrypoint: /bin/sh -c "apk add --no-cache mosquitto-clients jq curl bash && /event-clip-downloader.sh"    
 

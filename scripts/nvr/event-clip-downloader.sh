@@ -15,25 +15,26 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
     TYPE=$(echo "$PAYLOAD" | jq -r '.type')
     POS_CHANGES=$(echo "$PAYLOAD" | jq -r '.after.position_changes')
     LABEL=$(echo "$PAYLOAD" | jq -r '.after.label')
-    ZONES=$(echo "$PAYLOAD" | jq -r '.after.current_zones')
+    ZONES=$(echo "$PAYLOAD" | jq -c -r '.after.current_zones')
     STAT=$(echo "$PAYLOAD" | jq -r '.after.stationary')
     CAMERA=$(echo "$PAYLOAD" | jq -r '.after.camera')
     EVENT_ID=$(echo "$PAYLOAD" | jq -r '.after.id')
+    START_TIME=$(echo "$PAYLOAD" | jq -r '.after.start_time')
+    END_TIME=$(echo "$PAYLOAD" | jq -r '.after.end_time')
 
-    if [[ "$LABEL" == "person" ]]; then
-        PUSHOVER_MSG="$CAMERA $LABEL $TYPE $EVENT_ID"
-	if [[ "$ZONES" != "[]" ]]; then
-            PUSHOVER_MSG="$PUSHOVER_MSG in $ZONES"
-	fi
-	echo "Pushover message: $PUSHOVER_MSG"
-	if [[ "$NOTIFICATION_ENABLED" == "true" ]] && [[ $TYPE == "new" ]]; then
-            curl -s --form-string "token=$PUSHOVER_TOKEN" --form-string "user=$PUSHOVER_USERKEY" --form-string "message=$PUSHOVER_MSG" https://api.pushover.net/1/messages.json
-	fi
-    fi
+    # if [[ "$LABEL" == "person" ]]; then
+    #     PUSHOVER_MSG="$CAMERA $LABEL $TYPE $EVENT_ID"
+    #     if [[ "$ZONES" != "[]" ]]; then
+    #             PUSHOVER_MSG="$PUSHOVER_MSG in $ZONES"
+    #     fi
+    #     echo "Message: $PUSHOVER_MSG"
+    #     if [[ "$NOTIFICATION_ENABLED" == "true" ]] && [[ $TYPE == "new" ]]; then
+    #             curl -s --form-string "token=$PUSHOVER_TOKEN" --form-string "user=$PUSHOVER_USERKEY" --form-string "message=$PUSHOVER_MSG" https://api.pushover.net/1/messages.json
+    #     fi
+    # fi
 
     if [[ "$LABEL" =~ ^(person|car|bus|bicycle|motorcycle)$ ]] && [[ "$TYPE" == "end" ]] && [[ "$POS_CHANGES" -gt 0 ]]; then
 	{
-	    EVENT_ID=$(echo "$PAYLOAD" | jq -r '.after.id')
 	    FILE_NAME="event_${EVENT_ID}_${CAMERA}_${LABEL}.mp4"
 
             MAX_RETRIES=3
@@ -63,5 +64,27 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
             fi
 	} &
     fi
+
+    if [[ "$LABEL" =~ ^(person|car|bus|bicycle|motorcycle)$ ]] && [[ -n "$METADATA_FUNC" && "$METADATA_FUNC" != "NOT-SET" ]]; then
+        METADATA_PAYLOAD=$(jq -n \
+            --arg event_id "$EVENT_ID" \
+            --arg camera "$CAMERA" \
+            --arg label "$LABEL" \
+            --arg zones "$ZONES" \
+            --arg startTime "$START_TIME" \
+            --arg endTime "$END_TIME" \
+            '{
+                id: $event_id,
+                cameraId: $camera,
+                objectType: $label,
+                zones: ($zones | fromjson),
+                eventStartTime: $startTime,
+                eventEndTime: $endTime
+            }'
+        )   
+        echo "Sending metadata to Azure func: $METADATA_PAYLOAD"
+        curl --json "$METADATA_PAYLOAD" -H "x-functions-key: $METADATA_KEY" "$METADATA_FUNC"
+    fi
+
 done
 
