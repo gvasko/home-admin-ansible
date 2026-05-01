@@ -17,7 +17,7 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
     LABEL=$(echo "$PAYLOAD" | jq -r '.after.label')
     ZONES=$(echo "$PAYLOAD" | jq -c -r '.after.current_zones')
     STAT=$(echo "$PAYLOAD" | jq -r '.after.stationary')
-    CAMERA=$(echo "$PAYLOAD" | jq -r '.after.camera')
+    CAMERA=$(echo "$PAYLOAD" | jq -r '.after.camera' | sed 's/_/-/g')
     EVENT_ID=$(echo "$PAYLOAD" | jq -r '.after.id')
     START_TIME=$(echo "$PAYLOAD" | jq -r '.after.start_time')
     END_TIME=$(echo "$PAYLOAD" | jq -r '.after.end_time')
@@ -66,7 +66,7 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
     fi
 
     if [[ "$LABEL" =~ ^(person|car|bus|bicycle|motorcycle)$ ]] && [[ -n "$METADATA_FUNC" && "$METADATA_FUNC" != "NOT-SET" ]]; then
-        METADATA_PAYLOAD=$(jq -n \
+            METADATA_PAYLOAD=$(jq -n \
             --arg event_id "$EVENT_ID" \
             --arg camera "$CAMERA" \
             --arg label "$LABEL" \
