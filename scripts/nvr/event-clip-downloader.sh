@@ -5,8 +5,10 @@
 MQTT_HOST="mqtt"
 FRIGATE_HOST="frigate"
 SAVE_DIR="/clips"
+CACHE_DIR="$SAVE_DIR/cache"
 
 mkdir -p "$SAVE_DIR"
+mkdir -p "$CACHE_DIR"
 
 # Wait for MQTT to be ready
 sleep 5
@@ -48,8 +50,9 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
                 echo "Attempt $RETRY_COUNT: Waiting ${WAIT_TIME}s to download $EVENT_ID..."
                 sleep $WAIT_TIME
                 
-                if curl -sf "http://$FRIGATE_HOST:5000/api/events/$EVENT_ID/clip.mp4?padding=5" -o "$SAVE_DIR/$FILE_NAME"; then
+                if curl -sf "http://$FRIGATE_HOST:5000/api/events/$EVENT_ID/clip.mp4?padding=5" -o "$CACHE_DIR/$FILE_NAME"; then
                     echo "Success: Saved clip for $EVENT_ID on attempt $RETRY_COUNT: $FILE_NAME - stationary: $STAT."
+                    mv "$CACHE_DIR/$FILE_NAME" "$SAVE_DIR/"
                     SUCCESS=true
                     break
                 else
@@ -59,7 +62,7 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
                 fi
             done
 
-            if [ "$SUCCESS" = false ]; then
+            if [ "$SUCCESS" == false ]; then
                 echo "Final Error: Could not download clip for $EVENT_ID after $MAX_RETRIES attempts: $FILE_NAME - stationary: $STAT."
             fi
 	} &
