@@ -31,7 +31,7 @@ TIME_AGO=$(date --date='10 minutes ago' --iso-8601=seconds)
 SRC_DIR=$LOCAL_CAM_DETECTOR_DIR
 DEST_DIR=$REMOTE_CAM_DETECTOR_DIR
 
-ionice -c 3 azcopy copy "$SRC_DIR/*" "$DEST_DIR/?$REMOTE_CAM_STORAGE_SAS" --recursive=true --cap-mbps $UPLOAD_MBPS --overwrite=false --include-after="$TIME_AGO" >> $LOGFILE 2>&1
+ionice -c 3 azcopy copy "$SRC_DIR/*" "$DEST_DIR/?$REMOTE_CAM_STORAGE_SAS" --recursive=true --exclude-path "cache" --cap-mbps $UPLOAD_MBPS --overwrite=false --include-after="$TIME_AGO" >> $LOGFILE 2>&1
 azcopyStatus=$?
 
 if [ $azcopyStatus -ne 0 ]; then
