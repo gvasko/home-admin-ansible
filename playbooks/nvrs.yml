@@ -190,7 +190,7 @@
       copy:
         dest: /etc/nut/ups.conf
         content: |
-          [eaton]
+          [nvrups]
               driver = usbhid-ups
               port = auto
               desc = "EATON UPS 5E 900 USB DIN Gen2"
@@ -226,7 +226,7 @@
       copy:
         dest: /etc/nut/upslog.conf
         content: |
-          MONITOR eaton@localhost "/var/log/ups/upslog.log" "[%TIME @Y-@m-@d @H:@M:@S%] Battery: %VAR battery.charge %%%
+          MONITOR nvrups@localhost "/var/log/ups/upslog.log" "[%TIME @Y-@m-@d @H:@M:@S%] Battery: %VAR battery.charge %%%
           Input voltage: %VAR input.voltage% UPS load: %VAR ups.load% STATUS: [%VAR ups.status%] Temperature: %VAR ups.temperature% Frequency: %VAR input.frequency%"
         owner: root
         group: nut
@@ -250,7 +250,7 @@
       copy:
         dest: /etc/nut/upsmon.conf
         content: |
-          MONITOR eaton@localhost 1 monuser monitor primary
+          MONITOR nvrups@localhost 1 monuser monitor primary
           MINSUPPLIES 1
           SHUTDOWNCMD "/sbin/shutdown -h +0"
           NOTIFYCMD /etc/nut/ups-notify.sh
@@ -258,12 +258,12 @@
           NOTIFYMSG ONBATT      "UPS-ALERT %s on battery"
           NOTIFYMSG LOWBATT     "UPS-ALERT %s battery is low"
           NOTIFYMSG FSD         "UPS-ALERT %s: forced shutdown in progress"
-          NOTIFYMSG COMMOK      "UPS-OK Communications with UPS %s established"
-          NOTIFYMSG COMMBAD     "UPS-ERR Communications with UPS %s lost"
-          NOTIFYMSG SHUTDOWN    "UPS-ALERT Auto logout and shutdown proceeding"
+          NOTIFYMSG COMMOK      "UPS-OK %s Communications with UPS established"
+          NOTIFYMSG COMMBAD     "UPS-ERR %s Communications with UPS lost"
+          NOTIFYMSG SHUTDOWN    "UPS-ALERT %s Auto logout and shutdown proceeding"
           NOTIFYMSG REPLBATT    "UPS-WARN %s battery needs to be replaced"
           NOTIFYMSG NOCOMM      "UPS-ERR %s is unavailable"
-          NOTIFYMSG NOPARENT    "UPS-ERR upsmon parent process died - shutdown impossible"
+          NOTIFYMSG NOPARENT    "UPS-ERR %s upsmon parent process died - shutdown impossible"
           NOTIFYMSG CAL         "UPS-INFO %s: calibration in progress"
           NOTIFYMSG OFF         "UPS-ALERT %s: administratively OFF or asleep"
           NOTIFYMSG NOTOFF      "UPS-OK %s: no longer administratively OFF or asleep"
@@ -342,7 +342,7 @@
 
     - name: Create NVR home automation secrets file
       template:
-        src: "{{ playbook_dir }}/../templates/home-automation.secrets.j2"
+        src: "{{ playbook_dir }}/../templates/nvr/home-automation.secrets.j2"
         dest: /home/nvr/.home-automation.secrets
         owner: nvr
         group: nvr
@@ -488,7 +488,7 @@
       ansible.builtin.cron:
         name: "message at boot"
         special_time: reboot
-        job: "sleep 10 && /home/nvr/home-admin/nvr/cron/test-docker-logs.sh"
+        job: "sleep 10 && /home/nvr/home-admin/nvr/cron/startup.sh"
         user: nvr
 
 

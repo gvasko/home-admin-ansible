@@ -36,4 +36,269 @@
         state: present
         update_cache: yes
 
-# run download-mibs
+  tasks:
+    - name: Run download-mibs
+      ansible.builtin.command:
+        cmd: "download-mibs"
+      become: true
+
+    - name: Ensure admin home automation directory exists
+      file:
+        path: /home/admin/home-admin
+        state: directory
+        owner: admin
+        group: admin
+        mode: '0755'
+
+    - name: Copy host scripts to admin home admin directory
+      synchronize:
+        src: "{{ playbook_dir }}/../scripts/"
+        dest: /home/admin/home-admin/
+        recursive: yes
+        delete: no
+      become: false
+
+    - name: Ensure admin home automation scripts are owned by admin
+      file:
+        path: /home/admin/home-admin
+        state: directory
+        recurse: yes
+        owner: admin
+        group: admin
+        mode: '0755'
+
+    - name: Install NUT for Eaton UPS monitoring
+      apt:
+        name:
+          - nut
+          - nut-server
+          - nut-client
+        state: latest
+        update_cache: yes
+
+    - name: Configure NUT standalone mode
+      copy:
+        dest: /etc/nut/nut.conf
+        content: |
+          MODE=standalone
+        owner: root
+        group: nut
+        mode: '0640'
+
+    - name: Configure NUT UPS definition
+      copy:
+        dest: /etc/nut/ups.conf
+        content: |
+          [routerpiups]
+              driver = usbhid-ups
+              port = auto
+              desc = "EATON UPS 5E 700 USB DIN Gen2"
+              vendorid = 0463
+              productid = ffff
+              ignorelb
+              override.battery.charge.low = 60
+        owner: root
+        group: nut
+        mode: '0640'
+
+    - name: Configure NUT server listeners
+      copy:
+        dest: /etc/nut/upsd.conf
+        content: |
+          LISTEN 127.0.0.1 3493
+        owner: root
+        group: nut
+        mode: '0640'
+
+    - name: Configure NUT users
+      copy:
+        dest: /etc/nut/upsd.users
+        content: |
+          [monuser]
+              password = monitor
+              upsmon primary
+        owner: root
+        group: nut
+        mode: '0640'
+
+    - name: Configure NUT logs
+      copy:
+        dest: /etc/nut/upslog.conf
+        content: |
+          MONITOR routerpiups@localhost "/var/log/ups/upslog.log" "[%TIME @Y-@m-@d @H:@M:@S%] Battery: %VAR battery.charge %%%
+          Input voltage: %VAR input.voltage% UPS load: %VAR ups.load% STATUS: [%VAR ups.status%] Temperature: %VAR ups.temperature% Frequency: %VAR input.frequency%"
+        owner: root
+        group: nut
+        mode: '0640'
+
+    - name: Add UPS notify script
+      copy:
+        dest: /etc/nut/ups-notify.sh
+        content: |
+          #!/bin/bash
+          message=$(echo $1 | sed s/@localhost//)
+          curl -s \
+          --form-string "token={{ lookup('env', 'CTRLNODE_PUSHOVER_UPS_TOKEN') }}" \
+          --form-string "user={{ lookup('env', 'CTRLNODE_PUSHOVER_USERKEY') }}" \
+          --form-string "message=$1" \
+          https://api.pushover.net/1/messages.json
+        owner: root
+        group: nut
+        mode: '0755'
+
+    - name: Configure NUT monitor
+      copy:
+        dest: /etc/nut/upsmon.conf
+        content: |
+          MONITOR routerpiups@localhost 1 monuser monitor primary
+          MINSUPPLIES 1
+          SHUTDOWNCMD "/sbin/shutdown -h +0"
+          NOTIFYCMD /etc/nut/ups-notify.sh
+          NOTIFYMSG ONLINE      "UPS-OK %s on line power"
+          NOTIFYMSG ONBATT      "UPS-ALERT %s on battery"
+          NOTIFYMSG LOWBATT     "UPS-ALERT %s battery is low"
+          NOTIFYMSG FSD         "UPS-ALERT %s: forced shutdown in progress"
+          NOTIFYMSG COMMOK      "UPS-OK %s Communications with UPS established"
+          NOTIFYMSG COMMBAD     "UPS-ERR %s Communications with UPS lost"
+          NOTIFYMSG SHUTDOWN    "UPS-ALERT %s Auto logout and shutdown proceeding"
+          NOTIFYMSG REPLBATT    "UPS-WARN %s battery needs to be replaced"
+          NOTIFYMSG NOCOMM      "UPS-ERR %s is unavailable"
+          NOTIFYMSG NOPARENT    "UPS-ERR %s upsmon parent process died - shutdown impossible"
+          NOTIFYMSG CAL         "UPS-INFO %s: calibration in progress"
+          NOTIFYMSG OFF         "UPS-ALERT %s: administratively OFF or asleep"
+          NOTIFYMSG NOTOFF      "UPS-OK %s: no longer administratively OFF or asleep"
+          NOTIFYMSG BYPASS      "UPS-WARN %s: on bypass (powered, not protecting)"
+          NOTIFYMSG NOTBYPASS   "UPS-OK %s: no longer on bypass"
+          NOTIFYFLAG ONLINE	SYSLOG+EXEC
+          NOTIFYFLAG ONBATT	SYSLOG+EXEC
+          NOTIFYFLAG LOWBATT	SYSLOG+EXEC
+          NOTIFYFLAG FSD		SYSLOG+EXEC
+          NOTIFYFLAG COMMOK	SYSLOG+EXEC
+          NOTIFYFLAG COMMBAD	SYSLOG+EXEC
+          NOTIFYFLAG SHUTDOWN	SYSLOG+EXEC
+          NOTIFYFLAG REPLBATT	SYSLOG+EXEC
+          NOTIFYFLAG NOCOMM	SYSLOG+EXEC
+          NOTIFYFLAG NOPARENT	SYSLOG+EXEC
+        owner: root
+        group: nut
+        mode: '0640'
+
+    - name: Ensure Eaton NUT driver is started and enabled
+      ansible.builtin.systemd_service:
+        name: nut-driver@eaton.service
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+    - name: Ensure NUT server is started and enabled
+      ansible.builtin.systemd_service:
+        name: nut-server.service
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+    - name: Ensure NUT monitor is started and enabled
+      ansible.builtin.systemd_service:
+        name: nut-monitor.service
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+    - name: Install pigpio daemon and python venv tools
+      ansible.builtin.apt:
+        name:
+          - pigpio
+          - python3-venv
+        state: present
+        update_cache: yes
+      become: yes
+
+    - name: Enable and start pigpiod service
+      ansible.builtin.systemd:
+        name: pigpiod
+        enabled: yes
+        state: started
+      become: yes
+
+    - name: Install Tailscale using official script
+      shell: curl -fsSL https://tailscale.com/install.sh | sh
+      become: true
+      args:
+        creates: /usr/bin/tailscale
+
+    - name: Create admin home automation secrets file
+      template:
+        src: "{{ playbook_dir }}/../templates/routerpi/home-automation.secrets.j2"
+        dest: /home/admin/.home-automation.secrets
+        owner: admin
+        group: admin
+        mode: '0600'
+
+    - name: Schedule all background tasks
+      ansible.builtin.cron:
+        name: "{{ item.name }}"
+        minute: "{{ item.minute | default('*') }}"
+        hour: "{{ item.hour | default('*') }}"
+        weekday: "{{ item.weekday | defaul('*') }}"
+        job: "{{ item.job }}"
+        state: present
+        user: admin
+      loop:
+        - name: "ping homenvr"
+          job: "/home/admin/home-admin/routerpi/cron/test-access-nvr.sh"
+        - name: "set fan to day-mode"
+          minute: "0"
+          hour: "6"
+          job: "/usr/bin/python /home/admin/home-admin/routerpi/cron/set-fan-speed.py 40"
+        - name: "set fan to night-mode"
+          minute: "0"
+          hour: "21"
+          job: "/usr/bin/python /home/admin/home-admin/routerpi/cron/set-fan-speed.py 20"
+        - name: "kid-network MON-SAT morning start"
+          minute: "0"
+          hour: "9"
+          weekday: "1-6"
+          job: "/home/admin/home-admin/routerpi/cron/kid-network-on.sh"
+        - name: "kid-network MON-SAT morning stop"
+          minute: "0"
+          hour: "11"
+          weekday: "1-6"
+          job: "/home/admin/home-admin/routerpi/cron/kid-network-off.sh"
+        - name: "kid-network MON-SAT afternoon start"
+          minute: "0"
+          hour: "13"
+          weekday: "1-6"
+          job: "/home/admin/home-admin/routerpi/cron/kid-network-on.sh"
+        - name: "kid-network MON-SAT evening stop"
+          minute: "0"
+          hour: "19"
+          weekday: "1-6"
+          job: "/home/admin/home-admin/routerpi/cron/kid-network-off.sh"
+        - name: "kid-network SUN morning start"
+          minute: "0"
+          hour: "8"
+          weekday: "0"
+          job: "/home/admin/home-admin/routerpi/cron/kid-network-on.sh"
+        - name: "kid-network SUN morning stop"
+          minute: "30"
+          hour: "9"
+          weekday: "0"
+          job: "/home/admin/home-admin/routerpi/cron/kid-network-off.sh"
+        # check if homework is done before auto turn-on
+        # - name: "kid-network SUN afternoon start"
+        #   minute: "0"
+        #   hour: "13"
+        #   weekday: "0"
+        #   job: "/home/admin/home-admin/routerpi/cron/kid-network-on.sh"
+        - name: "kid-network SUN evening stop"
+          minute: "0"
+          hour: "18"
+          weekday: "0"
+          job: "/home/admin/home-admin/routerpi/cron/kid-network-off.sh"
+
+    - name: Send message after boot
+      ansible.builtin.cron:
+        name: "message at boot"
+        special_time: reboot
+        job: "sleep 10 && /home/nvr/home-admin/nvr/cron/test-docker-logs.sh"
+        user: nvr
