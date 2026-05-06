@@ -19,6 +19,7 @@
         autoremove: yes
         autoclean: yes
       register: dist_upgrade
+      when: run_dist_upgrade | default(false) | bool
 
     - name: Reboot if required after dist-upgrade
       reboot:
@@ -185,6 +186,7 @@
         owner: root
         group: nut
         mode: '0640'
+      notify: Restart NUT services
 
     - name: Configure NUT UPS definition
       copy:
@@ -201,6 +203,7 @@
         owner: root
         group: nut
         mode: '0640'
+      notify: Restart NUT services
 
     - name: Configure NUT server listeners
       copy:
@@ -210,6 +213,7 @@
         owner: root
         group: nut
         mode: '0640'
+      notify: Restart NUT services
 
     - name: Configure NUT users
       copy:
@@ -221,6 +225,7 @@
         owner: root
         group: nut
         mode: '0640'
+      notify: Restart NUT services
 
     - name: Configure NUT logs
       copy:
@@ -231,20 +236,23 @@
         owner: root
         group: nut
         mode: '0640'
+      notify: Restart NUT services
 
     - name: Add UPS notify script
       copy:
         dest: /etc/nut/ups-notify.sh
         content: |
           #!/bin/bash
+          message=$(echo $1 | sed s/@localhost//)
           curl -s \
           --form-string "token={{ lookup('env', 'CTRLNODE_PUSHOVER_UPS_TOKEN') }}" \
           --form-string "user={{ lookup('env', 'CTRLNODE_PUSHOVER_USERKEY') }}" \
-          --form-string "message=$1" \
+          --form-string "message=$message" \
           https://api.pushover.net/1/messages.json
         owner: root
         group: nut
         mode: '0755'  
+      notify: Restart NUT services
 
     - name: Configure NUT monitor
       copy:
@@ -282,6 +290,7 @@
         owner: root
         group: nut
         mode: '0640'
+      notify: Restart NUT services
 
     - name: Ensure Eaton NUT driver is started and enabled
       ansible.builtin.systemd_service:
@@ -289,6 +298,10 @@
         state: started
         enabled: yes
         daemon_reload: yes
+      register: systemd_result
+      until: systemd_result is succeeded
+      retries: 5
+      delay: 3
 
     - name: Ensure NUT server is started and enabled
       ansible.builtin.systemd_service:
@@ -497,6 +510,15 @@
       ansible.builtin.service:
         name: nginx
         state: reloaded
+
+    - name: Restart NUT services
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        state: restarted
+      loop:
+        - nut-driver@nvrups.service
+        - nut-server.service
+        - nut-monitor.service
 
   roles:
     - common

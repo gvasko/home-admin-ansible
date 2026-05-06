@@ -7,9 +7,10 @@ nvrs:
 
 raspis:
   hosts:
-    raspi:
-      ansible_host: raspi.local
-      ansible_user: pi
+    routerpi:
+      ansible_host: routerpi
+      ansible_user: admin
+      ansible_port: 22
 
 home_hosts:
   children:

@@ -19,6 +19,7 @@
         autoremove: yes
         autoclean: yes
       register: dist_upgrade
+      when: run_dist_upgrade | default(false) | bool
 
     - name: Reboot if required after dist-upgrade
       reboot:
@@ -140,7 +141,7 @@
           curl -s \
           --form-string "token={{ lookup('env', 'CTRLNODE_PUSHOVER_UPS_TOKEN') }}" \
           --form-string "user={{ lookup('env', 'CTRLNODE_PUSHOVER_USERKEY') }}" \
-          --form-string "message=$1" \
+          --form-string "message=$message" \
           https://api.pushover.net/1/messages.json
         owner: root
         group: nut
@@ -189,6 +190,10 @@
         state: started
         enabled: yes
         daemon_reload: yes
+      register: systemd_result
+      until: systemd_result is succeeded
+      retries: 5
+      delay: 3
 
     - name: Ensure NUT server is started and enabled
       ansible.builtin.systemd_service:
@@ -204,10 +209,14 @@
         enabled: yes
         daemon_reload: yes
 
+    - name: Reload udev rules and trigger
+      ansible.builtin.shell: udevadm control --reload-rules && udevadm trigger
+      become: true
+
     - name: Install pigpio daemon and python venv tools
       ansible.builtin.apt:
         name:
-          - pigpio
+          - python3-pigpio
           - python3-venv
         state: present
         update_cache: yes
@@ -239,7 +248,7 @@
         name: "{{ item.name }}"
         minute: "{{ item.minute | default('*') }}"
         hour: "{{ item.hour | default('*') }}"
-        weekday: "{{ item.weekday | defaul('*') }}"
+        weekday: "{{ item.weekday | default('*') }}"
         job: "{{ item.job }}"
         state: present
         user: admin
@@ -249,11 +258,11 @@
         - name: "set fan to day-mode"
           minute: "0"
           hour: "6"
-          job: "/usr/bin/python /home/admin/home-admin/routerpi/cron/set-fan-speed.py 40"
+          job: "/usr/bin/python /home/admin/home-admin/routerpi/cron/set-fan-speed.py {{ fan_percent_day }}"
         - name: "set fan to night-mode"
           minute: "0"
           hour: "21"
-          job: "/usr/bin/python /home/admin/home-admin/routerpi/cron/set-fan-speed.py 20"
+          job: "/usr/bin/python /home/admin/home-admin/routerpi/cron/set-fan-speed.py {{ fan_percent_night }}"
         - name: "kid-network MON-SAT morning start"
           minute: "0"
           hour: "9"
@@ -300,5 +309,9 @@
       ansible.builtin.cron:
         name: "message at boot"
         special_time: reboot
-        job: "sleep 10 && /home/nvr/home-admin/nvr/cron/test-docker-logs.sh"
-        user: nvr
+        job: "sleep 10 && /home/admin/home-admin/admin/cron/startup.sh"
+        user: admin
+
+    - name: Set fan percent to default
+      ansible.builtin.command:
+        cmd: "/usr/bin/python /home/admin/home-admin/routerpi/cron/set-fan-speed.py {{ fan_percent_day }}"
