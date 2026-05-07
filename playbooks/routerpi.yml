@@ -85,6 +85,7 @@
         owner: root
         group: nut
         mode: '0640'
+      notify: Restart NUT services
 
     - name: Configure NUT UPS definition
       copy:
@@ -101,6 +102,7 @@
         owner: root
         group: nut
         mode: '0640'
+      notify: Restart NUT services
 
     - name: Configure NUT server listeners
       copy:
@@ -110,6 +112,7 @@
         owner: root
         group: nut
         mode: '0640'
+      notify: Restart NUT services
 
     - name: Configure NUT users
       copy:
@@ -121,6 +124,7 @@
         owner: root
         group: nut
         mode: '0640'
+      notify: Restart NUT services
 
     - name: Configure NUT logs
       copy:
@@ -131,6 +135,7 @@
         owner: root
         group: nut
         mode: '0640'
+      notify: Restart NUT services
 
     - name: Add UPS notify script
       copy:
@@ -146,6 +151,7 @@
         owner: root
         group: nut
         mode: '0755'
+      notify: Restart NUT services
 
     - name: Configure NUT monitor
       copy:
@@ -183,10 +189,11 @@
         owner: root
         group: nut
         mode: '0640'
+      notify: Restart NUT services
 
     - name: Ensure Eaton NUT driver is started and enabled
       ansible.builtin.systemd_service:
-        name: nut-driver@eaton.service
+        name: nut-driver@routerpiups.service
         state: started
         enabled: yes
         daemon_reload: yes
@@ -315,3 +322,16 @@
     - name: Set fan percent to default
       ansible.builtin.command:
         cmd: "/usr/bin/python /home/admin/home-admin/routerpi/cron/set-fan-speed.py {{ fan_percent_day }}"
+
+  handlers:
+    - name: Restart NUT services
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        state: restarted
+      loop:
+        - nut-driver@routerpiups.service
+        - nut-server.service
+        - nut-monitor.service
+
+  roles:
+    - common
