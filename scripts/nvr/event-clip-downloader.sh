@@ -50,7 +50,7 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
                 echo "Attempt $RETRY_COUNT: Waiting ${WAIT_TIME}s to download $EVENT_ID..."
                 sleep $WAIT_TIME
                 
-                if curl -sf "http://$FRIGATE_HOST:5000/api/events/$EVENT_ID/clip.mp4?padding=5" -o "$CACHE_DIR/$FILE_NAME"; then
+                if curl -sSf --max-time 120 "http://$FRIGATE_HOST:5000/api/events/$EVENT_ID/clip.mp4?padding=5" -o "$CACHE_DIR/$FILE_NAME"; then
                     echo "Success: Saved clip for $EVENT_ID on attempt $RETRY_COUNT: $FILE_NAME - stationary: $STAT."
                     mv "$CACHE_DIR/$FILE_NAME" "$SAVE_DIR/"
                     SUCCESS=true
@@ -86,7 +86,11 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
             }'
         )   
         echo "Sending metadata to Azure func: $METADATA_PAYLOAD"
-        curl --json "$METADATA_PAYLOAD" -H "x-functions-key: $METADATA_KEY" "$METADATA_FUNC"
+        if curl -sSf --max-time 5 --json "$METADATA_PAYLOAD" -H "x-functions-key: $METADATA_KEY" "$METADATA_FUNC"; then
+            echo "Metadata successfully posted for $EVENT_ID"
+        else
+            echo "ERROR: could not post metadata for $EVENT_ID"
+        fi
     fi
 
 done
