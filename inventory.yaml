@@ -12,7 +12,7 @@ raspis:
       ansible_user: admin
       ansible_port: 22
 
-home_hosts:
-  children:
-    - nvrs
-    - raspis
+# home_hosts:
+#   children:
+#     nvrs:
+#     raspis:
