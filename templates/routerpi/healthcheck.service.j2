@@ -1,0 +1,11 @@
+[Unit]
+Description=Socat Health Check Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/socat TCP-LISTEN:{{ health_port }},fork,reuseaddr EXEC:{{ health_script_path }}
+Restart=always
+User={{ health_user }}
+
+[Install]
+WantedBy=multi-user.target

@@ -34,6 +34,7 @@
           - mc
           - snmp
           - snmp-mibs-downloader
+          - socat
         state: present
         update_cache: yes
 
@@ -323,6 +324,19 @@
       ansible.builtin.command:
         cmd: "/usr/bin/python /home/admin/home-admin/routerpi/cron/set-fan-speed.py {{ fan_percent_day }}"
 
+    - name: Deploy healthcheck service
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/routerpi/healthcheck.service.j2"
+        dest: /etc/systemd/system/healthcheck.service
+        mode: '0644'
+      notify: Reload systemd
+
+    - name: Ensure healthcheck service is running and enabled
+      ansible.builtin.systemd:
+        name: healthcheck
+        state: started
+        enabled: yes
+
   handlers:
     - name: Restart NUT services
       ansible.builtin.systemd_service:
@@ -332,6 +346,9 @@
         - nut-driver@routerpiups.service
         - nut-server.service
         - nut-monitor.service
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: yes
 
   roles:
     - common
