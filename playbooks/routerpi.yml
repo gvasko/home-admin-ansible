@@ -312,6 +312,8 @@
           hour: "18"
           weekday: "0"
           job: "/home/admin/home-admin/routerpi/cron/kid-network-off.sh"
+        - name: "nvr health check"
+          job: "/home/admin/home-admin/tools/test-health.sh nvr homenvr/health"
 
     - name: Send message after boot
       ansible.builtin.cron:

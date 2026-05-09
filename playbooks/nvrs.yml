@@ -496,6 +496,10 @@
         - name: "docker logs test"
           minute: "2"
           job: "/home/nvr/home-admin/nvr/cron/test-docker-logs.sh"
+        - name: "test all camera accessible"
+          job: "/home/nvr/home-admin/nvr/cron/test-access-all-cameras.sh"
+        - name: "routerpi health check"
+          job: "/home/nvr/home-admin/tools/test-health.sh routerpi routerpi:8001"
 
     - name: Send message after boot
       ansible.builtin.cron:
