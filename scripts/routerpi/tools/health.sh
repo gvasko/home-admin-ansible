@@ -1,11 +1,9 @@
 #!/bin/bash
 
-TEMP=$(vcgencmd measure_temp)
+TEMP=$(vcgencmd measure_temp | cut -d "=" -f2)
 UPTIME=$(uptime -p)
 
 echo "HTTP/1.1 200 OK"
-echo "Content-Type: text/plain"
+echo "Content-Type: application/json"
 echo ""
-echo "Status: OK"
-echo "$TEMP"
-echo "$UPTIME"
+echo "{\"status\": \"OK\", \"temperature\": \"$TEMP\", \"uptime\": \"$UPTIME\"}"
