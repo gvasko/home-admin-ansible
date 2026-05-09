@@ -312,6 +312,9 @@
           hour: "18"
           weekday: "0"
           job: "/home/admin/home-admin/routerpi/cron/kid-network-off.sh"
+        - name: "syslogs test"
+          minute: "*/10"
+          job: "/home/admin/home-admin/tools/test-syslog.sh"
         - name: "nvr health check"
           job: "/home/admin/home-admin/tools/test-health.sh nvr homenvr/health"
 
