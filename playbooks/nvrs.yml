@@ -91,6 +91,14 @@
         group: nvr
         mode: '0755'
 
+    - name: Create directory for statelog
+      ansible.builtin.file:
+        path: /home/admin/home-admin/statelog
+        state: directory
+        owner: admin
+        group: admin
+        mode: '0755'
+
     - name: Ensure cam-backup log file exists
       ansible.builtin.file:
         path: /var/log/cam-backup.log
