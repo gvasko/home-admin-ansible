@@ -20,7 +20,7 @@ fi
 
 FAILSTATE="$BASEDIR/statelog/$NAME-failed"
 
-if nc -z $IP $PORT ; then
+if nc -w 5 -z $IP $PORT ; then
 	if [ -f $FAILSTATE ]; then
 		rm $FAILSTATE
 		$BASEDIR/tools/admin-notify.sh "FIXED! $NAME is available again"
