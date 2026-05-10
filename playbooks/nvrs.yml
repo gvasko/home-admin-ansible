@@ -177,6 +177,23 @@
         state: link
         force: yes
 
+    - name: Add power management parameters to GRUB
+      ansible.builtin.lineinfile:
+        path: /etc/default/grub
+        regexp: '^(GRUB_CMDLINE_LINUX_DEFAULT=")(.*)(")'
+        line: '\1\2 i915.enable_dc=0 intel_idle.max_cstate=1\3'
+        backrefs: yes
+      register: grub_config
+
+    - name: Update GRUB configuration
+      ansible.builtin.command: update-grub
+      when: grub_config.changed
+
+    - name: Reboot to apply changes
+      ansible.builtin.reboot:
+        msg: "Rebooting to apply new kernel parameters"
+      when: grub_config.changed
+      
     - name: Install NUT for Eaton UPS monitoring
       apt:
         name:
