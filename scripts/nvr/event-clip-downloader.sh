@@ -37,6 +37,7 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
 
     if [[ "$LABEL" =~ ^(person|car|bus|bicycle|motorcycle)$ ]] && [[ "$TYPE" == "end" ]] && [[ "$POS_CHANGES" -gt 0 ]]; then
 	{
+        date '+%FT%T.%3N'
 	    FILE_NAME="event_${EVENT_ID}_${CAMERA}_${LABEL}.mp4"
 
             MAX_RETRIES=3
@@ -53,17 +54,18 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
                 if curl -sSf --max-time 120 "http://$FRIGATE_HOST:5000/api/events/$EVENT_ID/clip.mp4?padding=5" -o "$CACHE_DIR/$FILE_NAME"; then
                     echo "Success: Saved clip for $EVENT_ID on attempt $RETRY_COUNT: $FILE_NAME - stationary: $STAT."
                     mv "$CACHE_DIR/$FILE_NAME" "$SAVE_DIR/"
+                    echo "Downloaded mp4 for $EVENT_ID has successfully moved to $SAVE_DIR at $(date '+%FT%T.%3N')"
                     SUCCESS=true
                     break
                 else
-                    echo "Attempt $RETRY_COUNT failed for $EVENT_ID."
+                    echo "Attempt $RETRY_COUNT failed for $EVENT_ID at $(date '+%FT%T.%3N')"
                     # Increase wait time for the next attempt (exponential backoff)
-                    WAIT_TIME=$((WAIT_TIME + 10)) 
+                    # WAIT_TIME=$((WAIT_TIME + 10)) 
                 fi
             done
 
             if [ "$SUCCESS" == false ]; then
-                echo "Final Error: Could not download clip for $EVENT_ID after $MAX_RETRIES attempts: $FILE_NAME - stationary: $STAT."
+                echo "Final Error: Could not download clip for $EVENT_ID after $MAX_RETRIES attempts: $FILE_NAME at $(date '+%FT%T.%3N')."
             fi
 	} &
     fi
