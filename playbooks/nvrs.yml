@@ -107,6 +107,14 @@
         group: nvr
         mode: '0755'
 
+    - name: Create directory for mqtt
+      ansible.builtin.file:
+        path: /home/nvr/home-admin/mqtt
+        state: directory
+        owner: nvr
+        group: nvr
+        mode: '0755'
+
     - name: Ensure cam-backup log file exists
       ansible.builtin.file:
         path: /var/log/cam-backup.log
