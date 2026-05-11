@@ -31,7 +31,7 @@ services:
       - video
     volumes:
       - ${CAM_STORAGE_MNT}/cam-storage:/media/frigate
-      - ${CAM_STORAGE_MNT}/cam-config:/config
+      - ${BASEDIR}/cam-config:/config
       - /etc/localtime:/etc/localtime:ro
       - type: tmpfs
         target: /tmp/cache
