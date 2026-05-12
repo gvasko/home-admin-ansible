@@ -101,7 +101,7 @@
 
     - name: Create directory for cam-config
       ansible.builtin.file:
-        path: /home/nvr/home-admin/cam-config
+        path: /home/nvr/home-admin/appdata/cam-config
         state: directory
         owner: nvr
         group: nvr
@@ -109,7 +109,7 @@
 
     - name: Create directory for mqtt
       ansible.builtin.file:
-        path: /home/nvr/home-admin/mqtt
+        path: /home/nvr/home-admin/appdata/mqtt
         state: directory
         owner: nvr
         group: nvr
