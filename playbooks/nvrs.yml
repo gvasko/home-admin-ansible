@@ -149,7 +149,7 @@
         state: touch
         owner: nvr
         group: adm
-        mode: '0644'
+        mode: '0664'
         modification_time: preserve
         access_time: preserve
       become: true 
@@ -159,7 +159,7 @@
         dest: /etc/logrotate.d/cam-upload
         owner: root
         group: adm
-        mode: '0664'
+        mode: '0644'
         content: |
           /var/log/cam-upload.log {
               su root syslog
