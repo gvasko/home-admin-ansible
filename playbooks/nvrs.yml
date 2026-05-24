@@ -119,7 +119,7 @@
       ansible.builtin.file:
         path: /var/log/cam-backup.log
         state: touch
-        owner: root
+        owner: nvr
         group: adm
         mode: '0664'
         modification_time: preserve
@@ -147,7 +147,7 @@
       ansible.builtin.file:
         path: /var/log/cam-upload.log
         state: touch
-        owner: root
+        owner: nvr
         group: adm
         mode: '0644'
         modification_time: preserve
