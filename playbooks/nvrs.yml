@@ -131,7 +131,7 @@
         dest: /etc/logrotate.d/cam-backup
         owner: root
         group: adm
-        mode: '0664'
+        mode: '0644'
         content: |
           /var/log/cam-backup.log {
               daily
@@ -148,7 +148,7 @@
         state: touch
         owner: root
         group: adm
-        mode: '0664'
+        mode: '0644'
         modification_time: preserve
         access_time: preserve
       become: true 
