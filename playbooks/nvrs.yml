@@ -134,12 +134,12 @@
         mode: '0644'
         content: |
           /var/log/cam-backup.log {
-              su nvr adm
+              su root syslog
               daily
               rotate 3
               missingok
               notifempty
-              create 0664 root adm
+              create 0664 nvr adm
           }
       become: true
 
@@ -162,12 +162,12 @@
         mode: '0664'
         content: |
           /var/log/cam-upload.log {
-              su nvr adm
+              su root syslog
               daily
               rotate 3
               missingok
               notifempty
-              create 0664 root adm
+              create 0664 nvr adm
           }
       become: true
 
