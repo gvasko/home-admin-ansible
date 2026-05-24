@@ -134,6 +134,7 @@
         mode: '0644'
         content: |
           /var/log/cam-backup.log {
+              su nvr nvr
               daily
               rotate 3
               missingok
@@ -161,6 +162,7 @@
         mode: '0664'
         content: |
           /var/log/cam-upload.log {
+              su nvr nvr
               daily
               rotate 3
               missingok
