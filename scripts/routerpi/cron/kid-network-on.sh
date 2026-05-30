@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-if [ -f $HOME/skip-network.off ]; then
-	rm $HOME/skip-network.off
+if [ -f $HOME/skip-network.on ]; then
+	rm $HOME/skip-network.on
 	exit 0
 fi
 
