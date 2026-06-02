@@ -70,7 +70,7 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
 	} &
     fi
 
-    if [[ "$LABEL" =~ ^(person|car|bus|bicycle|motorcycle)$ ]] && [[ -n "$METADATA_FUNC" && "$METADATA_FUNC" != "NOT-SET" && "$ZONES" != "[]" ]]; then
+    if [[ "$LABEL" =~ ^(person|car|bus|bicycle|motorcycle)$ ]] && [[ -n "$METADATA_FUNC" ]] && [[ "$METADATA_FUNC" != "NOT-SET" ]] && [[ -n "$ZONES" || "$TYPE" == "end" ]]; then
             METADATA_PAYLOAD=$(jq -n \
             --arg event_id "$EVENT_ID" \
             --arg camera "$CAMERA" \
