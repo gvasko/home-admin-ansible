@@ -88,7 +88,7 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
             }'
         )   
         echo "Sending metadata to Azure func: $METADATA_PAYLOAD"
-        if curl -sSf --max-time 5 --json "$METADATA_PAYLOAD" -H "x-functions-key: $METADATA_KEY" "$METADATA_FUNC"; then
+        if curl -sSf --max-time 15 --json "$METADATA_PAYLOAD" -H "x-functions-key: $METADATA_KEY" "$METADATA_FUNC"; then
             echo "Metadata successfully posted for $EVENT_ID"
         else
             echo "ERROR: could not post metadata for $EVENT_ID"
