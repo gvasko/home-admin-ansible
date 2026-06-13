@@ -9,6 +9,6 @@ if [ -z $BASEDIR ]; then
 fi
 
 echo 'Starting daily cleanup...'
-find "$LOCAL_CAM_DETECTOR_DIR" -name 'event_*.mp4' -type f -mmin +360 -delete -print
+find "$LOCAL_CAM_DETECTOR_DIR" -name 'event_*.*' -type f -mmin +360 -delete -print
 echo 'Cleanup complete.'
 }
