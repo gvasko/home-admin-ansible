@@ -38,7 +38,9 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
     if [[ "$LABEL" =~ ^(person|car|bus|bicycle|motorcycle)$ ]] && [[ "$TYPE" == "end" ]] && [[ "$POS_CHANGES" -gt 0 ]]; then
 	{
         date '+%FT%T.%3N'
-	    FILE_NAME="event_${EVENT_ID}_${CAMERA}_${LABEL}.mp4"
+	    VIDEO_FILE_NAME="event_${EVENT_ID}_${CAMERA}_${LABEL}.mp4"
+	    THUMBNAIL_FILE_NAME="event_${EVENT_ID}_${CAMERA}_${LABEL}.jpg"
+	    PREVIEW_FILE_NAME="event_${EVENT_ID}_${CAMERA}_${LABEL}.gif"
 
             MAX_RETRIES=3
             RETRY_COUNT=0
@@ -51,9 +53,9 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
                 echo "Attempt $RETRY_COUNT: Waiting ${WAIT_TIME}s to download $EVENT_ID..."
                 sleep $WAIT_TIME
                 
-                if curl -sSf --max-time 120 "http://$FRIGATE_HOST:5000/api/events/$EVENT_ID/clip.mp4?padding=5" -o "$CACHE_DIR/$FILE_NAME"; then
-                    echo "Success: Saved clip for $EVENT_ID on attempt $RETRY_COUNT: $FILE_NAME - stationary: $STAT."
-                    mv "$CACHE_DIR/$FILE_NAME" "$SAVE_DIR/"
+                if curl -sSf --max-time 120 "http://$FRIGATE_HOST:5000/api/events/$EVENT_ID/clip.mp4?padding=5" -o "$CACHE_DIR/$VIDEO_FILE_NAME"; then
+                    echo "Success: Saved clip for $EVENT_ID on attempt $RETRY_COUNT: $VIDEO_FILE_NAME."
+                    mv "$CACHE_DIR/$VIDEO_FILE_NAME" "$SAVE_DIR/"
                     echo "Downloaded mp4 for $EVENT_ID has successfully moved to $SAVE_DIR at $(date '+%FT%T.%3N')"
                     SUCCESS=true
                     break
@@ -63,6 +65,18 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
                     # WAIT_TIME=$((WAIT_TIME + 10)) 
                 fi
             done
+
+            if curl -sSf --max-time 60 "http://$FRIGATE_HOST:5000/api/events/$EVENT_ID/thumbnail.jpg" -o "$SAVE_DIR/$THUMBNAIL_FILE_NAME"; then
+                echo "Success: Saved thumbnail for $EVENT_ID: $THUMBNAIL_FILE_NAME."
+            else
+                echo "Failed to save thumbnail for $EVENT_ID at $(date '+%FT%T.%3N')"
+            fi
+
+            if curl -sSf --max-time 60 "http://$FRIGATE_HOST:5000/api/events/$EVENT_ID/preview.gif" -o "$SAVE_DIR/$PREVIEW_FILE_NAME"; then
+                echo "Success: Saved preview for $EVENT_ID: $PREVIEW_FILE_NAME."
+            else
+                echo "Failed to save preview for $EVENT_ID at $(date '+%FT%T.%3N')"
+            fi
 
             if [ "$SUCCESS" == false ]; then
                 echo "Final Error: Could not download clip for $EVENT_ID after $MAX_RETRIES attempts: $FILE_NAME at $(date '+%FT%T.%3N')."
