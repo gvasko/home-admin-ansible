@@ -21,11 +21,16 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
     STAT=$(echo "$PAYLOAD" | jq -r '.after.stationary')
     CAMERA=$(echo "$PAYLOAD" | jq -r '.after.camera' | sed 's/_/-/g')
     EVENT_ID=$(echo "$PAYLOAD" | jq -r '.after.id')
+    seconds=$(echo "$EVENT_ID" | cut -d'.' -f1)
+    suffix=$(echo "$EVENT_ID" | cut -d'-' -f2)
+    inverse_seconds=$((3000000000 - seconds))
+    padded_inverse=$(printf "%011d" "$inverse_seconds")
+    REVERSE_ID="${padded_inverse}-${suffix}"
     START_TIME=$(echo "$PAYLOAD" | jq -r '.after.start_time')
     END_TIME=$(echo "$PAYLOAD" | jq -r '.after.end_time')
 
     # if [[ "$LABEL" == "person" ]]; then
-    #     PUSHOVER_MSG="$CAMERA $LABEL $TYPE $EVENT_ID"
+    #     PUSHOVER_MSG="$CAMERA $LABEL $TYPE $REVERSE_ID"
     #     if [[ "$ZONES" != "[]" ]]; then
     #             PUSHOVER_MSG="$PUSHOVER_MSG in $ZONES"
     #     fi
@@ -38,9 +43,9 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
     if [[ "$LABEL" =~ ^(person|car|bus|bicycle|motorcycle)$ ]] && [[ "$TYPE" == "end" ]] && [[ "$POS_CHANGES" -gt 0 ]]; then
 	{
         date '+%FT%T.%3N'
-	    VIDEO_FILE_NAME="event_${EVENT_ID}_${CAMERA}_${LABEL}.mp4"
-	    THUMBNAIL_FILE_NAME="event_${EVENT_ID}_${CAMERA}_${LABEL}.jpg"
-	    PREVIEW_FILE_NAME="event_${EVENT_ID}_${CAMERA}_${LABEL}.gif"
+	    VIDEO_FILE_NAME="event_${REVERSE_ID}_${CAMERA}_${LABEL}.mp4"
+	    THUMBNAIL_FILE_NAME="event_${REVERSE_ID}_${CAMERA}_${LABEL}.jpg"
+	    PREVIEW_FILE_NAME="event_${REVERSE_ID}_${CAMERA}_${LABEL}.gif"
 
             MAX_RETRIES=3
             RETRY_COUNT=0
@@ -87,13 +92,15 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
     if [[ "$LABEL" =~ ^(person|car|bus|bicycle|motorcycle)$ ]] && [[ -n "$METADATA_FUNC" ]] && [[ "$METADATA_FUNC" != "NOT-SET" ]] && [[ -n "$ZONES" || "$TYPE" == "end" ]]; then
             METADATA_PAYLOAD=$(jq -n \
             --arg event_id "$EVENT_ID" \
+            --arg reverse_id "$REVERSE_ID" \
             --arg camera "$CAMERA" \
             --arg label "$LABEL" \
             --arg zones "$ZONES" \
             --arg startTime "$START_TIME" \
             --arg endTime "$END_TIME" \
             '{
-                id: $event_id,
+                id: $reverse_id,
+                eventId: $event_id,
                 cameraId: $camera,
                 objectType: $label,
                 zones: ($zones | fromjson),
@@ -103,9 +110,9 @@ mosquitto_sub -h "$MQTT_HOST" -t "frigate/events" | while read -r PAYLOAD; do
         )   
         echo "Sending metadata to Azure func: $METADATA_PAYLOAD"
         if curl -sSf --max-time 15 --json "$METADATA_PAYLOAD" -H "x-functions-key: $METADATA_KEY" "$METADATA_FUNC"; then
-            echo "Metadata successfully posted for $EVENT_ID"
+            echo "Metadata successfully posted for $EVENT_ID as $REVERSE_ID" 
         else
-            echo "ERROR: could not post metadata for $EVENT_ID"
+            echo "ERROR: could not post metadata for $EVENT_ID as $REVERSE_ID"
         fi
     fi
 
