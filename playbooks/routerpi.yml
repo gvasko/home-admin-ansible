@@ -338,7 +338,7 @@
       ansible.builtin.cron:
         name: "message at boot"
         special_time: reboot
-        job: "sleep 10 && /home/admin/home-admin/admin/cron/startup.sh"
+        job: "sleep 10 && /home/admin/home-admin/routerpi/cron/startup.sh"
         user: admin
 
     - name: Set fan percent to default
