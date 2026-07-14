@@ -1,4 +1,4 @@
-fan_percent_day: 40
+fan_percent_day: 50
 fan_percent_night: 20
 health_port: 8001
 health_script_path: "/home/admin/home-admin/routerpi/tools/health.sh"
