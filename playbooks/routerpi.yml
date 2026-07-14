@@ -267,6 +267,7 @@
         weekday: "{{ item.weekday | default('*') }}"
         job: "{{ item.job }}"
         state: present
+        disabled: "{{ item.disabled | default('false') }}"
         user: admin
       loop:
         - name: "ping homenvr"
@@ -280,31 +281,37 @@
           hour: "21"
           job: "/usr/bin/python /home/admin/home-admin/routerpi/cron/set-fan-speed.py {{ fan_percent_night }}"
         - name: "kid-network MON-SAT morning start"
+          disabled: true
           minute: "0"
           hour: "9"
           weekday: "1-6"
           job: "/home/admin/home-admin/routerpi/cron/kid-network-on.sh"
         - name: "kid-network MON-SAT morning stop"
+          disabled: true
           minute: "0"
           hour: "11"
           weekday: "1-6"
           job: "/home/admin/home-admin/routerpi/cron/kid-network-off.sh"
         - name: "kid-network MON-SAT afternoon start"
+          disabled: true
           minute: "0"
           hour: "13"
           weekday: "1-6"
           job: "/home/admin/home-admin/routerpi/cron/kid-network-on.sh"
         - name: "kid-network MON-SAT evening stop"
+          disabled: true
           minute: "0"
           hour: "19"
           weekday: "1-6"
           job: "/home/admin/home-admin/routerpi/cron/kid-network-off.sh"
         - name: "kid-network SUN morning start"
+          disabled: true
           minute: "0"
           hour: "8"
           weekday: "0"
           job: "/home/admin/home-admin/routerpi/cron/kid-network-on.sh"
         - name: "kid-network SUN morning stop"
+          disabled: true
           minute: "30"
           hour: "9"
           weekday: "0"
@@ -316,6 +323,7 @@
         #   weekday: "0"
         #   job: "/home/admin/home-admin/routerpi/cron/kid-network-on.sh"
         - name: "kid-network SUN evening stop"
+          disabled: true
           minute: "0"
           hour: "18"
           weekday: "0"
