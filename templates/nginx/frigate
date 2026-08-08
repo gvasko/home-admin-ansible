@@ -1,7 +1,7 @@
 server {
     listen 80 default_server;
 
-    server_name homenvr;
+    server_name nvr.local;
 
     location = /health {
         access_log off;

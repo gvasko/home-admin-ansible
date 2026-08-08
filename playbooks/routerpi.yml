@@ -270,7 +270,7 @@
         disabled: "{{ item.disabled | default('false') }}"
         user: admin
       loop:
-        - name: "ping homenvr"
+        - name: "ping nvr.local"
           job: "/home/admin/home-admin/routerpi/cron/test-access-nvr.sh"
         - name: "set fan to day-mode"
           minute: "0"
@@ -332,7 +332,7 @@
           minute: "*/10"
           job: "/home/admin/home-admin/tools/test-syslog.sh"
         - name: "nvr health check"
-          job: "/home/admin/home-admin/tools/test-health.sh nvr homenvr/health"
+          job: "/home/admin/home-admin/tools/test-health.sh nvr nvr.local/health"
 
     - name: Send message after boot
       ansible.builtin.cron:
