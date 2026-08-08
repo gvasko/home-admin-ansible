@@ -8,6 +8,6 @@ if [ -z $BASEDIR ]; then
         exit 1
 fi
 
-$BASEDIR/tools/test-access.sh nvr nvr.local
+$BASEDIR/tools/test-access.sh nvr nvr.internal
 
 }

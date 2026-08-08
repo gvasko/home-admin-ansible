@@ -1,14 +1,14 @@
 nvrs:
   hosts:
     homenvr:
-      ansible_host: nvr.local
+      ansible_host: nvr.internal
       ansible_user: nvr
       ansible_port: 22
 
 raspis:
   hosts:
     routerpi:
-      ansible_host: routerpi.local
+      ansible_host: routerpi.internal
       ansible_user: admin
       ansible_port: 22
 
